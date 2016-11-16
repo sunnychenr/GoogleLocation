@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.chenr.googlelocationdemo">
+
+    <!--允许 API 利用 WiFi 或移动蜂窝数据（或同时利用两者）来确定设备位置。API 返回的位置精确度大约相当于城市街区-->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <!--允许 API 利用包括全球定位系统 (GPS) 在内的可用位置提供商以及 WiFi 和移动蜂窝数据尽可能精确地确定位置-->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+    <application
+        android:name="com.chenr.application.App"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+        <activity android:name=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--谷歌定位应用密钥-->
+        <meta-data
+            android:name="com.chenr.googlelocationdemo"
+            android:value="AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4" />
+
+    </application>
+
+</manifest>

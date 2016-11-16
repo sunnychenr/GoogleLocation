@@ -22,6 +22,7 @@ public class MainActivity extends FragmentActivity {
 
     }
 
+    // 初始化不知道成功没有;
     private void initView() {
         tv_location = (TextView) findViewById(R.id.tv_location);
 

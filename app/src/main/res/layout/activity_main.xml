@@ -21,19 +21,25 @@
             android:layout_width="wrap_content"
             android:layout_height="25dp"
             android:gravity="center"
-            android:text="请求信息："
-            android:id="@+id/textView" />
-
-        <TextView
-            android:id="@+id/tv_location"
-            android:layout_width="match_parent"
-            android:layout_height="25dp"/>
+            android:text="当前所在位置：" />
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/tv_location"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="此处有文字"/>
+
     <fragment
         android:name="com.google.android.gms.maps.MapFragment"
-        android:id="@+id/basic_map"
+        xmlns:map="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/googleMap"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:layout_marginTop="10dp"
+        map:uiCompass="false"
+        map:mapType="normal"
+        map:uiZoomControls="true"/>
+
 </LinearLayout>

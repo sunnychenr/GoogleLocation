@@ -9,9 +9,12 @@ import android.util.Log;
 public class LogUtil {
 
     private static final String TAG = "chenr";
+    private static boolean isOutput = true;
 
     public static void log (String log) {
-        Log.d(TAG, log);
+        if (isOutput) {
+            Log.d(TAG, log);
+        }
     }
 
 }

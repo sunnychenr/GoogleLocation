@@ -24,7 +24,7 @@
 
         <!--谷歌定位应用密钥-->
         <meta-data
-            android:name="com.chenr.googlelocationdemo"
+            android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4" />
 
     </application>

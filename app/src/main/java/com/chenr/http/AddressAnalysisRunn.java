@@ -1,10 +1,13 @@
 package com.chenr.http;
 
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.chenr.entity.AddressResponse;
+import com.chenr.utils.LogUtil;
 import com.chenr.utils.ToastUtil;
 import com.google.gson.Gson;
 
@@ -22,7 +25,7 @@ import java.net.URL;
 public class AddressAnalysisRunn implements Runnable {
 
     private final String getAddrURL = "https://maps.googleapis.com/maps/api/geocode/json?";
-    private final String AppKey = "key=AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4";
+    private final String AppKey = "&key=AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4";
     private final String LATLNG = "latlng=";
     private final String ANOTHER = "&language=zh_CN&locaiotn_type=ROOFTOP";
 
@@ -54,7 +57,7 @@ public class AddressAnalysisRunn implements Runnable {
         try {
             url = new URL(path);
             conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("get");
+            conn.setRequestMethod("GET");
             conn.setConnectTimeout(5000);
             conn.connect();
 
@@ -67,13 +70,23 @@ public class AddressAnalysisRunn implements Runnable {
                     buffer.append(line);
                 }
 
-                AddressResponse.ResultsBean resultsBean = new Gson().fromJson(buffer.toString(),
-                        AddressResponse.class).getResults().get(0);
-                String formatted_address = resultsBean.getFormatted_address();
-                msg.obj = formatted_address;
+                AddressResponse addressResponse = new Gson().fromJson(buffer.toString(), AddressResponse.class);
 
-                mHandler.sendMessage(msg);
+                String status = addressResponse.getStatus();
 
+                if (status.equals("OK")) {
+
+                    AddressResponse.ResultsBean resultsBean = addressResponse.getResults().get(0);
+                    String formatted_address = resultsBean.getFormatted_address();
+                    msg.obj = formatted_address;
+
+                    mHandler.sendMessage(msg);
+
+                } else {
+                    Looper.prepare();
+                    ToastUtil.toast(status);
+                    Looper.loop();
+                }
             } else {
                 ToastUtil.toast("请求失败！！！responseCode：" + responseCode);
             }

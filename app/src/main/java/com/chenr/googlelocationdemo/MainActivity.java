@@ -13,7 +13,9 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.widget.TextView;
 
+import com.chenr.entity.NavigationLine;
 import com.chenr.http.AddressAnalysisRunn;
+import com.chenr.http.GetWayRunn;
 import com.chenr.utils.LogUtil;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -29,8 +31,10 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 
-import static com.chenr.googlelocationdemo.R.id.googleMap;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends FragmentActivity {
 
@@ -42,6 +46,9 @@ public class MainActivity extends FragmentActivity {
     private GoogleApiClient mGoogleApiClient;
     // 谷歌地图对象;
     private GoogleMap map;
+
+    // 线路申请集合;
+    public static List<NavigationLine.RoutesBean.LegsBean.StepsBean.EndLocationBeanX> locations = new ArrayList();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +120,8 @@ public class MainActivity extends FragmentActivity {
             map.setOnMarkerClickListener(mOnMarkerClickListener);
             getAddress(location);
             locationMap(location);
+            new Thread(new GetWayRunn(mHandler, new LatLng(location.getLatitude(), location.getLongitude()),
+                    new LatLng(30.5408915639, 104.0764697120), 1)).start();
         }
 
     };
@@ -143,11 +152,22 @@ public class MainActivity extends FragmentActivity {
 
             switch (msg.what) {
                 case 0:
+                    LogUtil.log("携带信息: " + msg.toString());
                     String addr = msg.obj.toString();
                     tv_location.setText(addr);
                     break;
                 case 1:
-                    address = msg.obj.toString();
+
+                    LogUtil.log("线路转折点数 ------->"  + locations.size());
+
+                    PolylineOptions polylineOptions = new PolylineOptions();
+
+                    for (NavigationLine.RoutesBean.LegsBean.StepsBean.EndLocationBeanX x : locations) {
+                        polylineOptions.add(new LatLng(x.getLat(), x.getLng()));
+                    }
+
+                    map.addPolyline(polylineOptions);
+
                     break;
             }
 
@@ -155,6 +175,7 @@ public class MainActivity extends FragmentActivity {
     };
 
     private boolean isFirstLocation;
+
     private void locationMap(final Location location) {
         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
         CameraUpdate cameraUpdate = null;
@@ -178,12 +199,6 @@ public class MainActivity extends FragmentActivity {
             return;
         }
         map.setMyLocationEnabled(true);
-
-        addMarker(new LatLng(30.8, 104.8));
-        addMarker(new LatLng(30.5, 104.7));
-        addMarker(new LatLng(30.2, 104.4));
-
-
     }
 
     private void getAddress(Location location) {
@@ -205,7 +220,7 @@ public class MainActivity extends FragmentActivity {
 
         mGoogleApiClient.connect();
 
-        MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(googleMap);
+        MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.googleMap);
 
         mapFragment.getMapAsync(new OnMapReadyCallback() {
             @Override

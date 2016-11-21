@@ -3,6 +3,7 @@ package com.chenr.http;
 import android.os.Handler;
 import android.os.Message;
 
+import com.chenr.application.App;
 import com.chenr.entity.NavigationLine;
 import com.chenr.googlelocationdemo.MainActivity;
 import com.chenr.utils.LogUtil;
@@ -15,6 +16,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,12 +26,12 @@ import java.util.List;
 public class GetWayRunn implements Runnable {
 
     private final String getWayURL = "https://maps.googleapis.com/maps/api/directions/json?";
-    private final String APPKEY = "&key=AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4";
+    private final String APPKEY = "&key=" + App.AppKey;
     private final String ORIGIN = "origin=";
     private final String DESTINATION = "&destination=";
     private final String MODE = "&mode=walking";
     private final String UNITS = "&units=metric";
-    private final String LANGUAGE = "&language=zh_CN";
+    private final String LANGUAGE = "&language=" + App.SystemLanguage;
 
     private Handler mHandler;
     private LatLng mOrigin;
@@ -41,6 +43,7 @@ public class GetWayRunn implements Runnable {
         this.mOrigin = mOrigin;
         this.mDestination = mDestination;
         this.what = what;
+
     }
 
     @Override
@@ -62,6 +65,7 @@ public class GetWayRunn implements Runnable {
             url = new URL(path);
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod(method);
+            conn.setRequestProperty("Charset", "UTF-8");
             conn.setConnectTimeout(5000);
             conn.connect();
 
@@ -75,23 +79,26 @@ public class GetWayRunn implements Runnable {
                     buffer.append(line);
                 }
 
-                //LogUtil.log("获取路线结果 -----------> " + buffer.toString());
+                LogUtil.log("获取路线结果 -----------> " + buffer.toString());
 
                 NavigationLine navigationLine = new Gson().fromJson(buffer.toString(), NavigationLine.class);
-                NavigationLine.RoutesBean routesBean = navigationLine.getRoutes().get(0);
-                List<NavigationLine.RoutesBean.LegsBean> legs = routesBean.getLegs();
 
-                LogUtil.log("线路集合长度----->" + legs.size());
+                if (navigationLine.getStatus().equals("OK")) {
 
-                NavigationLine.RoutesBean.LegsBean legsBean = legs.get(0);
-                List<NavigationLine.RoutesBean.LegsBean.StepsBean> steps = legsBean.getSteps();
+                    List<NavigationLine.RoutesBean> routes = navigationLine.getRoutes();
 
-                for (NavigationLine.RoutesBean.LegsBean.StepsBean stepsBean : steps) {
-                    MainActivity.locations.add(stepsBean.getEnd_location());
+                    if (!routes.isEmpty()) {
+                        String points = routes.get(0).getOverview_polyline().getPoints();
+                        MainActivity.locations.addAll(decodePoly(points));
+
+                        mHandler.sendMessage(msg);
+                    }
+
+                } else {
+
+                    LogUtil.log("请求路线失败!!! ----> " + navigationLine.getStatus());
+
                 }
-
-                mHandler.sendMessage(msg);
-
             }
 
         } catch (MalformedURLException e) {
@@ -99,5 +106,39 @@ public class GetWayRunn implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+
+    private List<LatLng> decodePoly(String encoded) {
+
+        List<LatLng> poly = new ArrayList();
+        int index = 0, len = encoded.length();
+        int lat = 0, lng = 0;
+
+        while (index < len) {
+            int b, shift = 0, result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lat += dlat;
+
+            shift = 0;
+            result = 0;
+            do {
+                b = encoded.charAt(index++) - 63;
+                result |= (b & 0x1f) << shift;
+                shift += 5;
+            } while (b >= 0x20);
+            int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+            lng += dlng;
+
+            LatLng p = new LatLng((((double) lat / 1E5)),
+                    (((double) lng / 1E5)));
+            poly.add(p);
+        }
+        return poly;
     }
 }

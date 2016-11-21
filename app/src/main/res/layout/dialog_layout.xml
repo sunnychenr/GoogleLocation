@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/dialog_background">
+
+    <TextView
+        android:layout_marginTop="15dp"
+        android:id="@+id/dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="30sp"
+        android:gravity="center"
+        android:text="这是标题"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:scaleType="center"
+            android:src="@mipmap/wifi"/>
+        <TextView
+            android:id="@+id/dialog_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:text="这里是地址显示的地方"/>
+
+    </LinearLayout>
+    
+    <Button
+        android:id="@+id/btn_dist"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginLeft="15dp"
+        android:layout_marginRight="15dp"
+        android:layout_marginBottom="15dp"
+        android:text="距离"
+        android:textSize="22sp"
+        android:textColor="@android:color/white"
+        android:background="@drawable/button_shape"/>
+
+</LinearLayout>

@@ -3,12 +3,15 @@ package com.chenr.http;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.chenr.entity.AddressResponse;
-import com.chenr.utils.LogUtil;
+import com.chenr.application.App;
+import com.chenr.entity.AddressInfos;
+import com.chenr.googlelocationdemo.R;
 import com.chenr.utils.ToastUtil;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;
@@ -25,26 +28,27 @@ import java.net.URL;
 public class AddressAnalysisRunn implements Runnable {
 
     private final String getAddrURL = "https://maps.googleapis.com/maps/api/geocode/json?";
-    private final String AppKey = "&key=AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4";
+    private final String AppKey = "&key=" + App.AppKey;
     private final String LATLNG = "latlng=";
-    private final String ANOTHER = "&language=zh_CN&locaiotn_type=ROOFTOP";
+    private final String LOCATION_TYPE = "&locaiotn_type=ROOFTOP";
+    private final String LANGUAGE = "&language=" + App.SystemLanguage;
 
     private Handler mHandler;
-    private String latitude;
-    private String longitude;
+    private LatLng mLatLng;
+    private TextView tv_addr;
     private int what;
 
-    public AddressAnalysisRunn(Handler mHandler, double latitude, double longitude, int what) {
+    public AddressAnalysisRunn(Handler mHandler, LatLng mLatLng, TextView tv_addr, int what) {
         this.mHandler = mHandler;
-        this.latitude = String.valueOf(latitude);
-        this.longitude = String.valueOf(longitude);
+        this.mLatLng = mLatLng;
+        this.tv_addr = tv_addr;
         this.what = what;
     }
 
     @Override
     public void run() {
 
-        String path = getAddrURL + LATLNG + latitude + "," + longitude + AppKey + ANOTHER;
+        String path = getAddrURL + LATLNG + mLatLng.latitude + "," + mLatLng.longitude + AppKey + LANGUAGE + LOCATION_TYPE;
 
         URL url = null;
         HttpURLConnection conn = null;
@@ -70,22 +74,35 @@ public class AddressAnalysisRunn implements Runnable {
                     buffer.append(line);
                 }
 
-                AddressResponse addressResponse = new Gson().fromJson(buffer.toString(), AddressResponse.class);
+                AddressInfos addressInfos = new Gson().fromJson(buffer.toString(), AddressInfos.class);
 
-                String status = addressResponse.getStatus();
+                String status = addressInfos.getStatus();
 
                 if (status.equals("OK")) {
 
-                    AddressResponse.ResultsBean resultsBean = addressResponse.getResults().get(0);
-                    String formatted_address = resultsBean.getFormatted_address();
+                    AddressInfos.ResultsBean resultsBean = addressInfos.getResults().get(0);
+                    final String formatted_address = resultsBean.getFormatted_address();
                     msg.obj = formatted_address;
 
-                    mHandler.sendMessage(msg);
+                    tv_addr.post(new Runnable() {
+
+                        @Override
+                        public void run() {
+
+                            tv_addr.setText(formatted_address);
+
+                        }
+
+                    });
+
+                    //mHandler.sendMessage(msg);
 
                 } else {
+
                     Looper.prepare();
                     ToastUtil.toast(status);
                     Looper.loop();
+
                 }
             } else {
                 ToastUtil.toast("请求失败！！！responseCode：" + responseCode);
@@ -95,6 +112,14 @@ public class AddressAnalysisRunn implements Runnable {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                br.close();
+                conn.disconnect();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

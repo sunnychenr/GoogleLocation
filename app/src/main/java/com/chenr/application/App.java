@@ -10,6 +10,9 @@ import android.support.multidex.MultiDex;
 
 public class App extends Application {
 
+    public static String SystemLanguage = "";
+    public static String AppKey = "AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4";
+
     public static Context applicationContext;
 
     @Override
@@ -22,5 +25,6 @@ public class App extends Application {
     public void onCreate() {
         super.onCreate();
         applicationContext = getApplicationContext();
+        SystemLanguage = getResources().getConfiguration().locale.getLanguage();
     }
 }

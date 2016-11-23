@@ -1,5 +1,6 @@
 package com.chenr.http;
 
+import android.app.Activity;
 import android.os.Handler;
 import android.os.Message;
 
@@ -7,7 +8,9 @@ import com.chenr.application.App;
 import com.chenr.entity.NavigationLine;
 import com.chenr.googlelocationdemo.MainActivity;
 import com.chenr.utils.LogUtil;
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
 
 import java.io.BufferedReader;
@@ -43,7 +46,6 @@ public class GetWayRunn implements Runnable {
         this.mOrigin = mOrigin;
         this.mDestination = mDestination;
         this.what = what;
-
     }
 
     @Override
@@ -53,10 +55,10 @@ public class GetWayRunn implements Runnable {
         String method = "GET";
 
         String line = "";
-        Message msg = mHandler.obtainMessage(what);
         StringBuffer buffer = new StringBuffer();
 
         URL url = null;
+        Message msg = mHandler.obtainMessage(what);
         HttpURLConnection conn = null;
         BufferedReader br = null;
 
@@ -89,7 +91,9 @@ public class GetWayRunn implements Runnable {
 
                     if (!routes.isEmpty()) {
                         String points = routes.get(0).getOverview_polyline().getPoints();
-                        MainActivity.locations.addAll(decodePoly(points));
+                        MainActivity.mLatlngs.addAll(decodePoly(points));
+
+                        LogUtil.log("路线信息已发送... ...");
 
                         mHandler.sendMessage(msg);
                     }
@@ -105,6 +109,17 @@ public class GetWayRunn implements Runnable {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+             if (br != null) {
+                 try {
+                     br.close();
+                 } catch (IOException e) {
+                     e.printStackTrace();
+                 }
+             }
+             if (conn != null) {
+                 conn.disconnect();
+             }
         }
     }
 

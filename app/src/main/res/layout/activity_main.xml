@@ -39,8 +39,9 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginTop="10dp"
-        map:uiCompass="false"
+        map:uiMapToolbar="false"
         map:mapType="normal"
+        map:uiCompass="false"
         map:uiZoomControls="true"/>
 
 </LinearLayout>

@@ -2,11 +2,13 @@ package com.chenr.googlelocationdemo;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.ResultReceiver;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -15,10 +17,14 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.chenr.application.App;
 import com.chenr.entity.LocalWiFi;
 import com.chenr.http.AddressAnalysisRunn;
 import com.chenr.http.GetWayRunn;
+import com.chenr.other.DrawLine;
+import com.chenr.utils.AnalysisLatlngIntentService;
 import com.chenr.utils.LogUtil;
+import com.chenr.utils.ToastUtil;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -37,24 +43,31 @@ import com.google.gson.Gson;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends FragmentActivity {
 
-    private TextView tv_location;
+    private static final int GETWAY = 1;
 
-    // 谷歌定位请求;
-    private LocationRequest mLocationRequest;
+    private TextView tv_location = null;
+
+    // 定位请求;
+    private LocationRequest mLocationRequest = null;
     // 谷歌Api客户端;
-    private GoogleApiClient mGoogleApiClient;
+    private GoogleApiClient mGoogleApiClient = null;
+    // 当前位置经纬度;
+    private LatLng currentLocation = null;
     // 谷歌地图对象;
-    private GoogleMap map;
-
+    private static GoogleMap map = null;
+    //private GoogleMap map = null;
     // 线路申请集合;
-    public static List<LatLng> locations = new ArrayList();
+    public static List<LatLng> mLatlngs = new ArrayList();
+    // wifi位置集合;
+    private Map<LatLng, String> markerInfos = new HashMap();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,7 +76,7 @@ public class MainActivity extends FragmentActivity {
         initView();
     }
 
-    // 谷歌连接回调(调什么不知道);
+    // 连接回调(调什么不知道);
     private GoogleApiClient.ConnectionCallbacks mConnectionCallback = new GoogleApiClient.ConnectionCallbacks() {
 
         @Override
@@ -71,8 +84,6 @@ public class MainActivity extends FragmentActivity {
 
             // 创建一个定位请求;
             mLocationRequest = LocationRequest.create();
-            // 设置请求间隔;
-            //mLocationRequest.setInterval(2000);
             // 设置请求优先级;
             mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION) !=
@@ -86,21 +97,18 @@ public class MainActivity extends FragmentActivity {
 
                 return;
             }
-
             map.setMyLocationEnabled(true);
-
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,
                     mLocationRequest, mLocationListener);
 
-            //Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+            Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+            LogUtil.log("lastLocation -------> " + lastLocation);
 
-            //LogUtil.log("lastLocation ------->" + lastLocation);
+            if (lastLocation != null) {
+                locationMap(lastLocation);
+            }
 
-            map.setOnMarkerClickListener(mOnMarkerClickListener);
-            //locationMap(lastLocation);
             getWifiInfos();
-            /*new Thread(new GetWayRunn(mHandler, new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()),
-                    new LatLng(30.5408915639, 104.0764697120), 1)).start();*/
 
         }
 
@@ -109,23 +117,25 @@ public class MainActivity extends FragmentActivity {
         }
     };
 
-    // 谷歌连接失败监听;
+    // 连接失败监听;
     private GoogleApiClient.OnConnectionFailedListener mOnConnectionFailedListener =
             new GoogleApiClient.OnConnectionFailedListener() {
 
                 @Override
                 public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-                    LogUtil.log("连接失败结果----->" + connectionResult.toString());
+                    LogUtil.log("连接失败----->" + connectionResult.toString());
                 }
             };
 
+    // MyLocation层按钮点击监听;
     private GoogleMap.OnMyLocationButtonClickListener mOnMyLocationButtonClickListener = new GoogleMap.OnMyLocationButtonClickListener() {
+
         @Override
         public boolean onMyLocationButtonClick() {
 
-            if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
+            if (ActivityCompat.checkSelfPermission(MainActivity.this, android.Manifest.permission.ACCESS_FINE_LOCATION)
                     != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MainActivity.this,
-                    Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
 
                 ActivityCompat.requestPermissions(MainActivity.this,
                         new String[]{android.Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -134,20 +144,20 @@ public class MainActivity extends FragmentActivity {
                 return true;
             }
             locationMap(LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient));
-            LogUtil.log("被点击了…………");
+            LogUtil.log("重新定位按钮被点击... ...");
             return true;
         }
     };
 
     // 获取WiFi信息;
+    private List<LocalWiFi.DataBean> wifis = null;
+
     private void getWifiInfos() {
 
         String line = "";
         LocalWiFi localWiFi = null;
-        List<LocalWiFi.DataBean> wifis = null;
         StringBuffer buffer = new StringBuffer();
         BufferedReader br = new BufferedReader(new InputStreamReader(getResources().openRawResource(R.raw.wifi)));
-
         try {
             while ((line = br.readLine()) != null) {
                 buffer.append(line);
@@ -155,9 +165,15 @@ public class MainActivity extends FragmentActivity {
             localWiFi = new Gson().fromJson(buffer.toString(), LocalWiFi.class);
             wifis = localWiFi.getData();
             LogUtil.log("附近WiFi信息 -------------> " + wifis);
-            addMarker(wifis);
+            addMarker();
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            try {
+                br.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
 
@@ -177,59 +193,86 @@ public class MainActivity extends FragmentActivity {
 
     };
 
-    private String address = "暂时没有";
+    private ResultReceiver mResultRecevier = new ResultReceiver(mHandler) {
 
+        @Override
+        protected void onReceiveResult(int resultCode, Bundle resultData) {
+            if (tv_addr != null & resultCode == 1 & resultData != null) {
+                String address = resultData.getCharSequence("address").toString();
+                tv_addr.setText(address);
+            }
+        }
+
+    };
+
+
+    private TextView tv_addr;
     // 地图标记点击监听;
     private GoogleMap.OnMarkerClickListener mOnMarkerClickListener = new GoogleMap.OnMarkerClickListener() {
         @Override
-        public boolean onMarkerClick(Marker marker) {
+        public boolean onMarkerClick(final Marker marker) {
 
-            LatLng position = marker.getPosition();
+            final LatLng position = marker.getPosition();
+            String str = markerInfos.get(position);
 
-            final AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
+            String title = str.substring(0, str.indexOf("&"));
+            String dist = str.substring(str.indexOf("&") + 1, str.indexOf(".")) + "m";
+
+            AlertDialog.Builder dialog = new AlertDialog.Builder(MainActivity.this);
             View view = View.inflate(MainActivity.this, R.layout.dialog_layout, null);
             TextView tv_title = (TextView) view.findViewById(R.id.dialog_title);
-            TextView tv_addr = (TextView) view.findViewById(R.id.dialog_address);
+            tv_addr = (TextView) view.findViewById(R.id.dialog_address);
             Button btn_dist = (Button) view.findViewById(R.id.btn_dist);
 
-            tv_title.setText(marker.getTitle());
+            tv_title.setText(title);
+            btn_dist.setText(dist);
+
+            //new Thread(new AddressAnalysisRunn(position, tv_addr)).start();
+            Intent intent = new Intent(MainActivity.this, AnalysisLatlngIntentService.class);
+            intent.putExtra("receiver", mResultRecevier);
+            intent.putExtra("location", currentLocation);
+            startService(intent);
+
+            dialog.setView(view);
+            final AlertDialog show = dialog.show();
 
             btn_dist.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
 
+                    mLatlngs.clear();
+                    addMarker();
+                    new Thread(new GetWayRunn(mHandler, currentLocation, position, GETWAY)).start();
+                    show.dismiss();
                 }
             });
-
-            new Thread(new AddressAnalysisRunn(mHandler, position, tv_addr, 1)).start();
-            dialog.setView(view);
-            dialog.show();
 
             return true;
         }
     };
 
-    private Handler mHandler = new Handler() {
+    private static Handler mHandler = new Handler() {
+//    private Handler mHandler = new Handler() {
 
         @Override
         public void handleMessage(Message msg) {
 
             switch (msg.what) {
-                case 0:
 
-                    LogUtil.log("携带信息: " + msg.toString());
-                    String addr = msg.obj.toString();
-                    tv_location.setText(addr);
-                    break;
+                case GETWAY:
+                    LogUtil.log("mLatlngs ------> " + mLatlngs);
 
-                case 1:
                     PolylineOptions polylineOptions = new PolylineOptions();
+                    //addMarker();
+                    /*polylineOptions.color(getResources().getColor(R.color.NavigationLineColor));
                     polylineOptions.width(5);
-                    polylineOptions.color(getResources().getColor(R.color.NavigationLineColor));
                     polylineOptions.geodesic(true);
-                    polylineOptions.addAll(locations);
 
-                    map.addPolyline(polylineOptions);
+                    polylineOptions.addAll(mLatlngs);
+
+                    map.addPolyline(polylineOptions);*/
+
+                    new DrawLine(App.applicationContext, map, mLatlngs, polylineOptions).draw();
 
                     break;
             }
@@ -239,8 +282,13 @@ public class MainActivity extends FragmentActivity {
 
     // 将当前位置设置到界面中心;
     private void locationMap(final Location location) {
-        LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15.0f));
+        if (location != null) {
+            currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 18.0f));
+        } else {
+            LogUtil.log("location 为空！！！");
+            ToastUtil.toast("定位失败！！！请检查是否打开定位服务开关");
+        }
     }
 
     private void initView() {
@@ -261,28 +309,30 @@ public class MainActivity extends FragmentActivity {
             @Override
             public void onMapReady(GoogleMap googleMap) {
                 map = googleMap;
+                map.setOnMyLocationButtonClickListener(mOnMyLocationButtonClickListener);
+                map.setOnMarkerClickListener(mOnMarkerClickListener);
             }
         });
+    }
 
+    private void addMarker () {
+        LogUtil.log("... ...添加标记");
+        MarkerOptions options = null;
+        LatLng ll = null;
+        map.clear();
+        for (LocalWiFi.DataBean wifidata : wifis ) {
+            options = new MarkerOptions();
+            ll = new LatLng(wifidata.getLati(), wifidata.getLongi());
+            options.position(ll);
+            options.icon(BitmapDescriptorFactory.fromResource(R.mipmap.wifi));
+            markerInfos.put(ll, wifidata.getSsid() + "&" + wifidata.getDist());
+            map.addMarker(options);
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         mGoogleApiClient.disconnect();
-    }
-
-    private void addMarker (List<LocalWiFi.DataBean> wifi) {
-        MarkerOptions options = null;
-
-        for (LocalWiFi.DataBean wifidata : wifi ) {
-            options = new MarkerOptions();
-            options.position(new LatLng(wifidata.getLati(), wifidata.getLongi()));
-            options.icon(BitmapDescriptorFactory.fromResource(R.mipmap.wifi));
-            options.title(wifidata.getSsid());
-
-            map.addMarker(options);
-        }
-
     }
 }

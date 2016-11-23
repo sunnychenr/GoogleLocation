@@ -33,16 +33,12 @@ public class AddressAnalysisRunn implements Runnable {
     private final String LOCATION_TYPE = "&locaiotn_type=ROOFTOP";
     private final String LANGUAGE = "&language=" + App.SystemLanguage;
 
-    private Handler mHandler;
     private LatLng mLatLng;
     private TextView tv_addr;
-    private int what;
 
-    public AddressAnalysisRunn(Handler mHandler, LatLng mLatLng, TextView tv_addr, int what) {
-        this.mHandler = mHandler;
+    public AddressAnalysisRunn(LatLng mLatLng, TextView tv_addr) {
         this.mLatLng = mLatLng;
         this.tv_addr = tv_addr;
-        this.what = what;
     }
 
     @Override
@@ -54,7 +50,6 @@ public class AddressAnalysisRunn implements Runnable {
         HttpURLConnection conn = null;
         BufferedReader br = null;
         String line = "";
-        Message msg = mHandler.obtainMessage(what);
         int responseCode = -1;
         StringBuffer buffer = new StringBuffer();
 
@@ -82,7 +77,6 @@ public class AddressAnalysisRunn implements Runnable {
 
                     AddressInfos.ResultsBean resultsBean = addressInfos.getResults().get(0);
                     final String formatted_address = resultsBean.getFormatted_address();
-                    msg.obj = formatted_address;
 
                     tv_addr.post(new Runnable() {
 
@@ -94,8 +88,6 @@ public class AddressAnalysisRunn implements Runnable {
                         }
 
                     });
-
-                    //mHandler.sendMessage(msg);
 
                 } else {
 
@@ -114,7 +106,10 @@ public class AddressAnalysisRunn implements Runnable {
             e.printStackTrace();
         } finally {
             try {
-                br.close();
+
+                if (br != null) {
+                    br.close();
+                }
                 conn.disconnect();
 
             } catch (IOException e) {

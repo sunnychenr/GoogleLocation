@@ -37,18 +37,30 @@ public class AnalysisLatlngIntentService extends IntentService {
         ResultReceiver receiver = intent.getParcelableExtra("receiver");
         LatLng location = intent.getParcelableExtra("location");
 
-        Geocoder mGeocoder = new Geocoder(this, Locale.ENGLISH);
+        String language = getResources().getConfiguration().locale.getLanguage();
+        Locale locale = new Locale(language);
+        Geocoder mGeocoder = new Geocoder(this, locale);
         List<Address> addresses = null;
         try {
             addresses = mGeocoder.getFromLocation(location.latitude, location.longitude, 1);
-
-            LogUtil.log("address -----> " + addresses.get(0).getAddressLine(0));
+            LogUtil.log("addresses"  + addresses.toString());
+            Address addr = addresses.get(0);
+            String addressLine = "";
+            for (int i = 0; i < addr.getMaxAddressLineIndex(); i ++) {
+                addressLine = addr.getAddressLine(i);
+                if (!"".equals(addressLine)) {
+                    break;
+                }
+            }
+            LogUtil.log("address -----> " + addr);
+            LogUtil.log("城市名称 -----> " + addr.getLocality());
 
             if (addresses == null || addresses.isEmpty()) {
                 receiver.send(FAILED_RESULT, null);
             } else {
                 Bundle resultData = new Bundle();
-                resultData.putCharSequence("address", addresses.get(0).getAddressLine(0));
+                resultData.putCharSequence("address", addressLine);
+                resultData.putCharSequence("locality", addr.getLocality());
                 receiver.send(SUCCESS_RESULT, resultData);
             }
 
@@ -58,5 +70,4 @@ public class AnalysisLatlngIntentService extends IntentService {
         }
 
     }
-
 }

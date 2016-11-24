@@ -29,7 +29,7 @@ public class DrawLine {
 
     public void draw () {
         //PolylineOptions options = new PolylineOptions();
-        options.width(5);
+        options.width(10);
         options.color(context.getResources().getColor(R.color.NavigationLineColor));
         options.geodesic(true);
 

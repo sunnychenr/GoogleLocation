@@ -30,7 +30,8 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAC7f8wFBelDxjr6GW-WCLb-m8qqsuyQx4" />
-        <!--谷歌服务版本-->
+
+        <!-- Googel Play Service Version -->
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version" />

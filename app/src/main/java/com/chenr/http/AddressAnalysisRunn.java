@@ -9,7 +9,9 @@ import android.widget.TextView;
 
 import com.chenr.application.App;
 import com.chenr.entity.AddressInfos;
+import com.chenr.googlelocationdemo.MainActivity;
 import com.chenr.googlelocationdemo.R;
+import com.chenr.utils.LogUtil;
 import com.chenr.utils.ToastUtil;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
@@ -20,6 +22,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.List;
 
 /**
  * Created by ChenR on 2016/11/18.
@@ -34,11 +37,11 @@ public class AddressAnalysisRunn implements Runnable {
     private final String LANGUAGE = "&language=" + App.SystemLanguage;
 
     private LatLng mLatLng;
-    private TextView tv_addr;
+    private Handler mHandler;
 
-    public AddressAnalysisRunn(LatLng mLatLng, TextView tv_addr) {
+    public AddressAnalysisRunn(LatLng mLatLng, Handler mHandler) {
         this.mLatLng = mLatLng;
-        this.tv_addr = tv_addr;
+        this.mHandler = mHandler;
     }
 
     @Override
@@ -46,11 +49,14 @@ public class AddressAnalysisRunn implements Runnable {
 
         String path = getAddrURL + LATLNG + mLatLng.latitude + "," + mLatLng.longitude + AppKey + LANGUAGE + LOCATION_TYPE;
 
+        LogUtil.log("地理位置反编译接口 -------> " + path);
+
         URL url = null;
         HttpURLConnection conn = null;
         BufferedReader br = null;
         String line = "";
         int responseCode = -1;
+        Message msg = mHandler.obtainMessage(MainActivity.GETADDR);
         StringBuffer buffer = new StringBuffer();
 
         try {
@@ -76,42 +82,49 @@ public class AddressAnalysisRunn implements Runnable {
                 if (status.equals("OK")) {
 
                     AddressInfos.ResultsBean resultsBean = addressInfos.getResults().get(0);
-                    final String formatted_address = resultsBean.getFormatted_address();
+                    LogUtil.log("ResultsBean ---> " + resultsBean.toString());
+                    String formatted_address = resultsBean.getFormatted_address();
+                    String cityName = "";
+                    List<AddressInfos.ResultsBean.AddressComponentsBean> address_components = resultsBean.getAddress_components();
 
-                    tv_addr.post(new Runnable() {
-
-                        @Override
-                        public void run() {
-
-                            tv_addr.setText(formatted_address);
-
+                    for (int i = 0; i < address_components.size(); i ++) {
+                        int d = 0;
+                        AddressInfos.ResultsBean.AddressComponentsBean addressComponentsBean = address_components.get(i);
+                        List<String> types = addressComponentsBean.getTypes();
+                        LogUtil.log("城市地址 ------> " + types.toString());
+                        for (int j = 0; j < types.size(); j ++) {
+                            String str = types.get(j);
+                            if ("locality".equals(str)) {
+                                d = 10;
+                                break;
+                            }
                         }
-
-                    });
-
+                        if (d == 10) {
+                            cityName = addressComponentsBean.getLong_name();
+                            break;
+                        }
+                    }
+                    String ss = formatted_address + "&" + cityName;
+                    msg.obj = ss;
+                    mHandler.sendMessage(msg);
                 } else {
-
                     Looper.prepare();
                     ToastUtil.toast(status);
                     Looper.loop();
-
                 }
             } else {
                 ToastUtil.toast("请求失败！！！responseCode：" + responseCode);
             }
-
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
-
                 if (br != null) {
                     br.close();
                 }
                 conn.disconnect();
-
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -19,6 +19,8 @@ import android.widget.TextView;
 
 import com.chenr.application.App;
 import com.chenr.entity.LocalWiFi;
+import com.chenr.entity.MyClusterItem;
+import com.chenr.entity.MyClusterRenderer;
 import com.chenr.http.AddressAnalysisRunn;
 import com.chenr.http.GetWayRunn;
 import com.chenr.other.DrawLine;
@@ -42,6 +44,8 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.gson.Gson;
+import com.google.maps.android.clustering.ClusterManager;
+import com.google.maps.android.clustering.view.ClusterRenderer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -185,7 +189,8 @@ public class MainActivity extends FragmentActivity {
             localWiFi = new Gson().fromJson(buffer.toString(), LocalWiFi.class);
             wifis = localWiFi.getData();
             LogUtil.log("附近WiFi信息 -------------> " + wifis);
-            addMarker();
+            //addMarker();
+            addMarkerItems();
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -259,7 +264,7 @@ public class MainActivity extends FragmentActivity {
                 @Override
                 public void onClick(View v) {
                     mLatlngs.clear();
-                    addMarker();
+                    //addMarker();
                     new Thread(new GetWayRunn(mHandler, currentLocation, position, GETWAY)).start();
                     show.dismiss();
                 }
@@ -303,6 +308,7 @@ public class MainActivity extends FragmentActivity {
             LogUtil.log("获取 ------> 并将当前位置居中... ...");
             currentLocation = new LatLng(location.getLatitude(), location.getLongitude());
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 18.0f));
+            //addMarkerItems();
         } else if (currentLocation != null) {
             LogUtil.log("定位并将当前位置居中... ...");
             map.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLocation, 18.0f));
@@ -333,8 +339,26 @@ public class MainActivity extends FragmentActivity {
                 map.setOnMyLocationButtonClickListener(mOnMyLocationButtonClickListener);
                 map.setOnMarkerClickListener(mOnMarkerClickListener);
                 //map.setOnCameraChangeListener(mOnCameraChangeListener);
+                setClusterManager();
             }
         });
+
+    }
+
+    private ClusterManager<MyClusterItem> mClusterItemClusterManager;
+    private void setClusterManager() {
+        mClusterItemClusterManager = new ClusterManager<MyClusterItem>(MainActivity.this, map);
+        MyClusterRenderer mMyClusterRenderer = new MyClusterRenderer(MainActivity.this, map, mClusterItemClusterManager);
+        mClusterItemClusterManager.setRenderer(mMyClusterRenderer);
+        map.setOnMarkerClickListener(mClusterItemClusterManager);
+        map.setOnCameraChangeListener((GoogleMap.OnCameraChangeListener) mClusterItemClusterManager);
+
+    }
+
+    private void addMarkerItems() {
+        for (LocalWiFi.DataBean dataBean: wifis) {
+            mClusterItemClusterManager.addItem(new MyClusterItem(dataBean.getLati(), dataBean.getLongi()));
+        }
     }
 
     private void addMarker () {
@@ -349,6 +373,7 @@ public class MainActivity extends FragmentActivity {
             options.icon(BitmapDescriptorFactory.fromResource(R.mipmap.wifi));
             markerInfos.put(ll, wifidata.getSsid() + "&" + wifidata.getDist());
             map.addMarker(options);
+            mClusterItemClusterManager.addItem(new MyClusterItem(ll));
         }
         oneMarker();
     }

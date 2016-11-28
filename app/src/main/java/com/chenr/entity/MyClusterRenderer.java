@@ -48,24 +48,23 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
     private Context context;
     private IconGenerator mIconGenerator;
     private Handler mHandler;
+    private ClusterManager<MyClusterItem> mClusterManager;
 
-    public MyClusterRenderer(Context context, GoogleMap map, ClusterManager<MyClusterItem> clusterManager, Handler mHandler) {
-        super(context, map, clusterManager);
+    public MyClusterRenderer(Context context, GoogleMap map, ClusterManager<MyClusterItem> mClusterManager, Handler mHandler) {
+        super(context, map, mClusterManager);
         this.map = map;
         this.context = context;
         this.mHandler = mHandler;
+        this.mClusterManager = mClusterManager;
         mIconGenerator = new IconGenerator(context);
-        clusterManager.setOnClusterClickListener(this);
-        clusterManager.setOnClusterInfoWindowClickListener(this);
-        clusterManager.setOnClusterItemClickListener(this);
-        clusterManager.setOnClusterItemInfoWindowClickListener(this);
+        mClusterManager.setOnClusterClickListener(this);
+        mClusterManager.setOnClusterInfoWindowClickListener(this);
+        mClusterManager.setOnClusterItemClickListener(this);
+        mClusterManager.setOnClusterItemInfoWindowClickListener(this);
     }
 
     @Override
     protected void onBeforeClusterRendered(Cluster<MyClusterItem> cluster, MarkerOptions markerOptions) {
-
-        LogUtil.log("onBeforeClusterRendered -------> 被调用");
-
         View view = View.inflate(context, R.layout.cluster, null);
         TextView tv = (TextView) view.findViewById(R.id.num);
         tv.setText(getClusterText(cluster));
@@ -76,9 +75,7 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
 
     private String getClusterText(Cluster<MyClusterItem> cluster) {
         int size = cluster.getSize();
-        if (size < BUCKETS[1]) {
-            return String.valueOf(size);
-        }
+
         for (int i = 1; i < BUCKETS.length; i ++) {
             if (size >= BUCKETS[i] && size < BUCKETS[i + 1]) {
                 return String.valueOf(BUCKETS[i]) + "+";
@@ -89,7 +86,6 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
 
     @Override
     protected void onBeforeClusterItemRendered(MyClusterItem item, MarkerOptions markerOptions) {
-        LogUtil.log("onBeforeClusterItemRendered -------> 被调用");
         markerOptions.icon(BitmapDescriptorFactory.fromResource(R.mipmap.wifi));
     }
 
@@ -148,12 +144,24 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
             @Override
             public void onClick(View v) {
                 map.clear();
+                MainActivity.mLatlngs.clear();
                 new Thread(new GetWayRunn(mHandler, MainActivity.currentLocation, position, 1)).start();
+                addMarkerItems();
                 show.dismiss();
             }
         });
 
         return true;
+    }
+
+    private void addMarkerItems() {
+        LogUtil.log("addMarkerItems ------> 被调用");
+        mClusterManager.clearItems();
+        for (LocalWiFi.DataBean dataBean: MainActivity.wifis) {
+            mClusterManager.addItem(new MyClusterItem(dataBean.getLati(), dataBean.getLongi(),
+                    dataBean.getSsid() + "&" + dataBean.getDist()));
+        }
+        mClusterManager.cluster();
     }
 
     @Override

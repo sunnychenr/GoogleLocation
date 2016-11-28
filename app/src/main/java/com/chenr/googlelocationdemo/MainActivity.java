@@ -54,7 +54,7 @@ public class MainActivity extends FragmentActivity {
     // 谷歌地图对象;
     private GoogleMap map = null;
     // 获取WiFi信息;
-    private List<LocalWiFi.DataBean> wifis = null;
+    public static List<LocalWiFi.DataBean> wifis = null;
     // 线路申请集合;
     public static List<LatLng> mLatlngs = new ArrayList();
 
@@ -183,8 +183,6 @@ public class MainActivity extends FragmentActivity {
                 case GETWAY:
                     LogUtil.log("mLatlngs ------> " + mLatlngs);
 
-                    addMarkerItems();
-
                     PolylineOptions polylineOptions = new PolylineOptions();
                     polylineOptions.color(getResources().getColor(R.color.NavigationLineColor));
                     polylineOptions.width(5);
@@ -252,10 +250,12 @@ public class MainActivity extends FragmentActivity {
 
     private void addMarkerItems() {
         LogUtil.log("addMarkerItems ------> 被调用");
+        mClusterItemClusterManager.clearItems();
         for (LocalWiFi.DataBean dataBean: wifis) {
             mClusterItemClusterManager.addItem(new MyClusterItem(dataBean.getLati(), dataBean.getLongi(),
                     dataBean.getSsid() + "&" + dataBean.getDist()));
         }
+        mClusterItemClusterManager.cluster();
     }
 
     @Override

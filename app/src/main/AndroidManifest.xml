@@ -24,8 +24,6 @@
             </intent-filter>
         </activity>
 
-        <service android:name="com.chenr.utils.AnalysisLatlngIntentService"/>
-
         <!--谷歌定位应用密钥-->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

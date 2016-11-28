@@ -1,18 +1,28 @@
 package com.chenr.entity;
 
+import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.BitmapFactory;
+import android.graphics.drawable.AnimationDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.support.v7.widget.DrawableUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
+import com.chenr.googlelocationdemo.MainActivity;
 import com.chenr.googlelocationdemo.R;
+import com.chenr.http.AddressAnalysisRunn;
+import com.chenr.http.GetWayRunn;
 import com.chenr.utils.LogUtil;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.maps.android.clustering.Cluster;
@@ -22,6 +32,8 @@ import com.google.maps.android.clustering.view.DefaultClusterRenderer;
 import com.google.maps.android.ui.IconGenerator;
 import com.google.maps.android.ui.SquareTextView;
 
+import org.w3c.dom.Text;
+
 /**
  * Created by ChenR on 2016/11/25.
  */
@@ -30,16 +42,18 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
         ClusterManager.OnClusterInfoWindowClickListener<MyClusterItem>, ClusterManager.OnClusterItemClickListener<MyClusterItem>,
         ClusterManager.OnClusterItemInfoWindowClickListener<MyClusterItem> {
 
-    private final int [] BUCKETS = new int[]{0, 5, 10, 20, 30, 40, 50, 70, 80, 90, 100};
+    private final int [] BUCKETS = new int[]{0, 5, 10, 20, 30, 40, 50, 70, 80, 90};
 
     private GoogleMap map;
     private Context context;
     private IconGenerator mIconGenerator;
+    private Handler mHandler;
 
-    public MyClusterRenderer(Context context, GoogleMap map, ClusterManager<MyClusterItem> clusterManager) {
+    public MyClusterRenderer(Context context, GoogleMap map, ClusterManager<MyClusterItem> clusterManager, Handler mHandler) {
         super(context, map, clusterManager);
         this.map = map;
         this.context = context;
+        this.mHandler = mHandler;
         mIconGenerator = new IconGenerator(context);
         clusterManager.setOnClusterClickListener(this);
         clusterManager.setOnClusterInfoWindowClickListener(this);
@@ -49,24 +63,15 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
 
     @Override
     protected void onBeforeClusterRendered(Cluster<MyClusterItem> cluster, MarkerOptions markerOptions) {
-        //mIconGenerator.setBackground(context.getResources().getDrawable(R.mipmap.wifis));
-        //mIconGenerator.setContentView(makeSquareTextView());
+
+        LogUtil.log("onBeforeClusterRendered -------> 被调用");
 
         View view = View.inflate(context, R.layout.cluster, null);
         TextView tv = (TextView) view.findViewById(R.id.num);
         tv.setText(getClusterText(cluster));
+        mIconGenerator.setBackground(context.getResources().getDrawable(R.mipmap.wifis));
         mIconGenerator.setContentView(view);
         markerOptions.icon(BitmapDescriptorFactory.fromBitmap(mIconGenerator.makeIcon()));
-    }
-
-    private SquareTextView makeSquareTextView() {
-        SquareTextView tv = new SquareTextView(context);
-        ViewGroup.LayoutParams params =  new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        tv.setTextSize(25.0f);
-        tv.setTextColor(0x087b05);
-        tv.setLayoutParams(params);
-        tv.setGravity(Gravity.CENTER_VERTICAL);
-        return tv;
     }
 
     private String getClusterText(Cluster<MyClusterItem> cluster) {
@@ -75,7 +80,7 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
             return String.valueOf(size);
         }
         for (int i = 1; i < BUCKETS.length; i ++) {
-            if (size > BUCKETS[i] && size < BUCKETS[i + 1]) {
+            if (size >= BUCKETS[i] && size < BUCKETS[i + 1]) {
                 return String.valueOf(BUCKETS[i]) + "+";
             }
         }
@@ -84,6 +89,7 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
 
     @Override
     protected void onBeforeClusterItemRendered(MyClusterItem item, MarkerOptions markerOptions) {
+        LogUtil.log("onBeforeClusterItemRendered -------> 被调用");
         markerOptions.icon(BitmapDescriptorFactory.fromResource(R.mipmap.wifi));
     }
 
@@ -119,7 +125,35 @@ public class MyClusterRenderer extends DefaultClusterRenderer<MyClusterItem> imp
     @Override
     public boolean onClusterItemClick(MyClusterItem myClusterItem) {
         LogUtil.log("onClusterItemClick... ...被调用");
-        return false;
+        final LatLng position = myClusterItem.getPosition();
+        String msg = myClusterItem.getMsg();
+        String title = msg.substring(0, msg.indexOf("&"));
+        String dist = msg.substring(msg.indexOf("&") + 1, msg.indexOf(".")) + "m";
+
+        AlertDialog.Builder dialog = new AlertDialog.Builder(context);
+        View view = View.inflate(context, R.layout.dialog_layout, null);
+        TextView tv_title = (TextView) view.findViewById(R.id.dialog_title);
+        TextView tv_addr = (TextView) view.findViewById(R.id.dialog_address);
+        Button btn_dist = (Button) view.findViewById(R.id.btn_dist);
+
+        tv_title.setText(title);
+        btn_dist.setText(dist);
+
+        new Thread(new AddressAnalysisRunn(position, mHandler, tv_addr)).start();
+
+        dialog.setView(view);
+        final AlertDialog show = dialog.show();
+
+        btn_dist.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                map.clear();
+                new Thread(new GetWayRunn(mHandler, MainActivity.currentLocation, position, 1)).start();
+                show.dismiss();
+            }
+        });
+
+        return true;
     }
 
     @Override

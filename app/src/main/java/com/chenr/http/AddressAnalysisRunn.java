@@ -38,10 +38,12 @@ public class AddressAnalysisRunn implements Runnable {
 
     private LatLng mLatLng;
     private Handler mHandler;
+    private TextView tv;
 
-    public AddressAnalysisRunn(LatLng mLatLng, Handler mHandler) {
+    public AddressAnalysisRunn(LatLng mLatLng, Handler mHandler, TextView tv) {
         this.mLatLng = mLatLng;
         this.mHandler = mHandler;
+        this.tv = tv;
     }
 
     @Override
@@ -83,7 +85,7 @@ public class AddressAnalysisRunn implements Runnable {
 
                     AddressInfos.ResultsBean resultsBean = addressInfos.getResults().get(0);
                     LogUtil.log("ResultsBean ---> " + resultsBean.toString());
-                    String formatted_address = resultsBean.getFormatted_address();
+                    final String formatted_address = resultsBean.getFormatted_address();
                     String cityName = "";
                     List<AddressInfos.ResultsBean.AddressComponentsBean> address_components = resultsBean.getAddress_components();
 
@@ -104,8 +106,13 @@ public class AddressAnalysisRunn implements Runnable {
                             break;
                         }
                     }
-                    String ss = formatted_address + "&" + cityName;
-                    msg.obj = ss;
+                    tv.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            tv.setText(formatted_address);
+                        }
+                    });
+                    msg.obj = cityName;
                     mHandler.sendMessage(msg);
                 } else {
                     Looper.prepare();

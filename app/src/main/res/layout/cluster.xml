@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="horizontal" android:layout_width="wrap_content"
-    android:layout_height="wrap_content">
+    android:orientation="horizontal"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="#00000000">
 
     <TextView
         android:id="@+id/num"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical|right"
-        android:paddingRight="20dp"
-        android:text="5"
-        android:textSize="15sp"
+        android:gravity="center_vertical|left"
+        android:paddingLeft="32dp"
+        android:text="15+"
+        android:textSize="13sp"
         android:textColor="#087b05"
         android:background="@mipmap/wifis"/>
 

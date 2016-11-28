@@ -15,13 +15,28 @@ import com.google.maps.android.clustering.ClusterItem;
 public class MyClusterItem implements ClusterItem {
 
     private final LatLng mLatLng;
+    private String msg;
 
-    public MyClusterItem(LatLng mLatLng) {
+    public MyClusterItem(LatLng mLatLng, String msg) {
         this.mLatLng = mLatLng;
+        this.msg = msg;
     }
 
-    public MyClusterItem (double lat, double lng) {
+    public MyClusterItem (double lat, double lng, String msg) {
         this.mLatLng = new LatLng(lat, lng);
+        this.msg = msg;
+    }
+
+    public void setMsg(String msg) {
+        this.msg = msg;
+    }
+
+    public LatLng getmLatLng() {
+        return mLatLng;
+    }
+
+    public String getMsg() {
+        return msg;
     }
 
     @Override
